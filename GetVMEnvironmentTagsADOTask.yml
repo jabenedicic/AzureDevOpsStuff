@@ -1,0 +1,15 @@
+# This is a small powershell task I put together to run in Azure DevOps when I have multiple VMs inside an Environment and I want to use
+# tags to find an attribute from a specific VM in the environment. Think 3 tier app, where you want to pass the name of one VM for use in
+# configuring an application during deployment. Handling in this way means the same set of deployment steps can be used across multiple
+# environments within the same pipeline e.g. DEV/UAT/PROD
+
+- powershell: |
+    $uAzureDevOpsAuthenicationHeader = @{Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"}
+    $uriPath = "$($env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI)$env:SYSTEM_TEAMPROJECTID/_apis/pipelines/environments/$(Environment.Id)/providers/virtualmachines?6.0-preview"
+    $uTagFind = Invoke-RestMethod -Uri $uriPath -Method get -Headers $uAzureDevOpsAuthenicationHeader
+    $uTagFindObj = $uTagFind | Select-Object -ExpandProperty value | Select-Object name,tags | Where-Object {$_.tags -eq "web"}
+    $uTagExport = $uTagFindObj.name
+    echo "##vso[task.setvariable variable=uTagName]$uTagExport"
+  env:
+    SYSTEM_ACCESSTOKEN: $(system.accesstoken)
+  displayName: 'Get VM Name from Tag and Set Variable'
